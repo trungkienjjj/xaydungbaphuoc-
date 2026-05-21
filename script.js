@@ -48,103 +48,50 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 3. CONSTRUCTION COST ESTIMATOR
-  const estimatorInputs = [
-    'service-type', 'house-type', 'area', 'floors', 'foundation-type', 'roof-type'
-  ];
+  // 3. DARK/LIGHT MODE TOGGLE
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    const darkIcon = themeToggle.querySelector('.mode-icon-dark');
+    const lightIcon = themeToggle.querySelector('.mode-icon-light');
 
-  estimatorInputs.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.addEventListener('input', calculateCost);
-    }
-  });
-
-  function calculateCost() {
-    const serviceType = document.getElementById('service-type').value;
-    const houseType = document.getElementById('house-type').value;
-    const area = parseFloat(document.getElementById('area').value) || 0;
-    const floors = parseInt(document.getElementById('floors').value) || 1;
-    const foundationType = document.getElementById('foundation-type').value;
-    const roofType = document.getElementById('roof-type').value;
-
-    if (area <= 0) {
-      updateEstimatorUI(0, 0, 0);
-      return;
+    // Check saved theme
+    if (localStorage.getItem('theme') === 'dark') {
+      document.body.classList.add('dark-mode');
+      if (darkIcon) darkIcon.style.display = 'none';
+      if (lightIcon) lightIcon.style.display = 'inline-block';
     }
 
-    // 1. Calculate Construction Area coefficient (m2)
-    // Foundation coefficient
-    let foundationCoeff = 0.3; // Đơn
-    if (foundationType === 'bang') foundationCoeff = 0.5;
-    else if (foundationType === 'coc') foundationCoeff = 0.4;
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      const isDark = document.body.classList.contains('dark-mode');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
 
-    // Roof coefficient
-    let roofCoeff = 0.3; // Tôn
-    if (roofType === 'be-tong') roofCoeff = 0.5;
-    else if (roofType === 'ngoi') roofCoeff = 0.7;
-
-    // Total area = (Area * Floors) + (Foundation * Area) + (Roof * Area)
-    const foundationArea = area * foundationCoeff;
-    const roofArea = area * roofCoeff;
-    const livingArea = area * floors;
-    const totalCalcArea = livingArea + foundationArea + roofArea;
-
-    // 2. Unit price per m2 based on Service and House Type
-    let unitPrice = 0;
-    if (serviceType === 'tron-goi') {
-      if (houseType === 'biet-thu') unitPrice = 7500000;
-      else if (houseType === 'nha-pho') unitPrice = 6000000;
-      else if (houseType === 'cap-4') unitPrice = 4800000;
-    } else { // phan-tho
-      if (houseType === 'biet-thu') unitPrice = 4200000;
-      else if (houseType === 'nha-pho') unitPrice = 3600000;
-      else if (houseType === 'cap-4') unitPrice = 3000000;
-    }
-
-    // 3. Estimate cost
-    const totalCost = totalCalcArea * unitPrice;
-
-    updateEstimatorUI(totalCalcArea, unitPrice, totalCost);
+      if (isDark) {
+        if (darkIcon) darkIcon.style.display = 'none';
+        if (lightIcon) lightIcon.style.display = 'inline-block';
+      } else {
+        if (darkIcon) darkIcon.style.display = 'inline-block';
+        if (lightIcon) lightIcon.style.display = 'none';
+      }
+    });
   }
 
-  function updateEstimatorUI(area, rate, total) {
-    const areaEl = document.getElementById('out-area');
-    const rateEl = document.getElementById('out-rate');
-    const totalEl = document.getElementById('out-total');
-
-    if (areaEl) areaEl.innerText = area > 0 ? `${area.toFixed(1)} m²` : '0 m²';
-    if (rateEl) rateEl.innerText = rate > 0 ? `${(rate / 1000000).toFixed(1)} triệu/m²` : '0 triệu/m²';
-    if (totalEl) totalEl.innerText = total > 0 ? formatCurrency(total) : '0 đ';
-  }
-
-  function formatCurrency(num) {
-    if (num >= 1000000000) {
-      return `${(num / 1000000000).toFixed(2)} tỷ VNĐ`;
-    }
-    return `${(num / 1000000).toFixed(0)} triệu VNĐ`;
-  }
-
-  // Trigger initial calculation
-  calculateCost();
-
-  // 4. MATERIAL PRICE SWITCHER
-  const tabBtns = document.querySelectorAll('.tab-btn');
-  const priceRows = document.querySelectorAll('.price-row');
-
-  tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      tabBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      const cat = btn.getAttribute('data-cat');
-      priceRows.forEach(row => {
-        if (cat === 'tat-ca' || row.getAttribute('data-cat') === cat) {
-          row.style.display = '';
-        } else {
-          row.style.display = 'none';
-        }
+  // 4. FAQ ACCORDION LOGIC
+  const faqQuestions = document.querySelectorAll('.faq-question');
+  faqQuestions.forEach(q => {
+    q.addEventListener('click', () => {
+      const item = q.parentElement;
+      const isActive = item.classList.contains('active');
+      
+      // Close all other FAQs
+      document.querySelectorAll('.faq-item').forEach(i => {
+        i.classList.remove('active');
       });
+
+      // Toggle current FAQ
+      if (!isActive) {
+        item.classList.add('active');
+      }
     });
   });
 
@@ -305,17 +252,36 @@ document.addEventListener('DOMContentLoaded', () => {
   // Pre-load reviews on start
   loadReviews();
 
-  // 7. CONTACT FORM SUBMISSION
+  // 7. CONTACT FORM SUBMISSION (EMAIL REDIRECTION)
   const contactForm = document.getElementById('contact-form');
   if (contactForm) {
     contactForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const name = document.getElementById('contact-name').value;
-      const phone = document.getElementById('contact-phone').value;
-      const desc = document.getElementById('contact-message').value;
+      const name = document.getElementById('contact-name').value.trim();
+      const phone = document.getElementById('contact-phone').value.trim();
+      const serviceSelect = document.getElementById('contact-service');
+      const service = serviceSelect ? serviceSelect.options[serviceSelect.selectedIndex].text : '';
+      const desc = document.getElementById('contact-message').value.trim();
 
-      // In real site, this sends data to an API or parses to email. Here we show a premium toast
-      showToastAlert(`Yêu cầu của bạn đã được tiếp nhận. Thầu Ba Phước sẽ liên hệ lại qua số ${phone} sớm nhất!`);
+      // Construct mailto link
+      const emailRecipient = "xaydungbaphuoc@gmail.com";
+      const subject = encodeURIComponent(`Yêu cầu tư vấn xây dựng - ${name}`);
+      const body = encodeURIComponent(
+        `Kính gửi Nhà thầu Ba Phước,\n\n` +
+        `Tôi gửi yêu cầu tư vấn xây dựng từ Website với thông tin sau:\n` +
+        `- Họ và tên: ${name}\n` +
+        `- Số điện thoại (Zalo): ${phone}\n` +
+        `- Dịch vụ quan tâm: ${service}\n` +
+        `- Nội dung chi tiết:\n${desc}\n\n` +
+        `Rất mong nhận được phản hồi từ anh/chị.`
+      );
+
+      // Open email client with prefilled info
+      window.open(`mailto:${emailRecipient}?subject=${subject}&body=${body}`, '_self');
+
+      // Show success toast with Zalo option
+      showToastAlert(`Đang mở ứng dụng email để gửi đến xaydungbaphuoc@gmail.com! Hoặc nhắn Zalo 090.720.5588 để phản hồi nhanh nhất.`);
+      
       contactForm.reset();
     });
   }
